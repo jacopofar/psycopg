@@ -11,7 +11,7 @@ from time import monotonic
 from queue import Queue, Empty
 from types import TracebackType
 from typing import Any, Callable, Deque, Dict, Iterator, List
-from typing import Optional, Type
+from typing import Optional, Type, Union
 from weakref import ref
 from contextlib import contextmanager
 from collections import deque
@@ -28,9 +28,13 @@ logger = logging.getLogger("psycopg.pool")
 
 
 class ConnectionPool(BasePool[Connection[Any]]):
+
+    # Limit the type to exclude the async callable
+    conninfo: Union[str, Callable[[], str]]
+
     def __init__(
         self,
-        conninfo: str = "",
+        conninfo: Union[str, Callable[[], str]] = "",
         *,
         connection_class: Type[Connection[Any]] = Connection,
         configure: Optional[Callable[[Connection[Any]], None]] = None,

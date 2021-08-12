@@ -594,6 +594,30 @@ async def test_putconn_wrong_pool(dsn):
                 await p2.putconn(conn)
 
 
+@pytest.mark.slow
+async def test_connect_callable(dsn):
+    calls = []
+
+    def process_dsn(conninfo):
+        async def process_dsn_():
+            calls.append(time())
+            return conninfo
+
+        return process_dsn_
+
+    async with pool.AsyncConnectionPool(process_dsn(dsn), min_size=2) as p:
+        await p.wait()
+        async with p.connection() as conn:
+            await asyncio.sleep(0.25)
+            await conn.close()
+
+        await p.wait()
+
+    assert len(calls) == 3
+    assert calls[1] - calls[0] < 0.25
+    assert calls[2] - calls[1] >= 0.25
+
+
 async def test_closed_getconn(dsn):
     p = pool.AsyncConnectionPool(dsn, min_size=1)
     assert not p.closed

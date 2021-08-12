@@ -578,6 +578,30 @@ def test_del_stop_threads(dsn):
         assert not t.is_alive()
 
 
+@pytest.mark.slow
+def test_connect_callable(dsn):
+    calls = []
+
+    def process_dsn(conninfo):
+        def process_dsn_():
+            calls.append(time())
+            return conninfo
+
+        return process_dsn_
+
+    with pool.ConnectionPool(process_dsn(dsn), min_size=2) as p:
+        p.wait()
+        with p.connection() as conn:
+            sleep(0.25)
+            conn.close()
+
+        p.wait()
+
+    assert len(calls) == 3
+    assert calls[1] - calls[0] < 0.25
+    assert calls[2] - calls[1] >= 0.25
+
+
 def test_closed_getconn(dsn):
     p = pool.ConnectionPool(dsn, min_size=1)
     assert not p.closed

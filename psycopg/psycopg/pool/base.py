@@ -5,8 +5,8 @@ psycopg connection pool base class and functionalities.
 # Copyright (C) 2021 The Psycopg Team
 
 from random import random
-from typing import Any, Callable, Deque, Dict, Generic, Optional
-from typing import TYPE_CHECKING
+from typing import Any, Awaitable, Callable, Deque, Dict, Generic, Optional
+from typing import TYPE_CHECKING, Union
 from collections import Counter, deque
 
 from ..abc import ConnectionType
@@ -39,7 +39,9 @@ class BasePool(Generic[ConnectionType]):
 
     def __init__(
         self,
-        conninfo: str = "",
+        conninfo: Union[
+            str, Callable[[], str], Callable[[], Awaitable[str]]
+        ] = "",
         *,
         kwargs: Optional[Dict[str, Any]] = None,
         min_size: int = 4,

@@ -11,7 +11,7 @@ from psycopg import encodings
 from psycopg import Connection, Notify
 from psycopg.rows import tuple_row
 from psycopg.errors import UndefinedTable
-from psycopg.conninfo import conninfo_to_dict
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from .utils import gc_collect
 from .test_cursor import my_row_factory
@@ -57,6 +57,14 @@ def test_connect_timeout():
         Connection.connect(host="localhost", port=port, connect_timeout=1)
     elapsed = time.time() - t0
     assert elapsed == pytest.approx(1.0, abs=0.05)
+
+
+def test_connect_callable(dsn):
+    dsn = double_the_port(dsn)
+
+    conn = Connection.connect(half_the_port(dsn))
+    assert not conn.closed
+    conn.close()
 
 
 def test_close(conn):
@@ -690,3 +698,22 @@ def test_set_transaction_param_strange(conn):
 
     conn.deferrable = 0
     assert conn.deferrable is False
+
+
+def double_the_port(conninfo):
+    """Return a conninfo with the port number doubled."""
+    d = conninfo_to_dict(conninfo)
+    port = d.get("port", 5432)
+    d["port"] = 2 * int(port)
+    return make_conninfo(**d)
+
+
+def half_the_port(conninfo):
+    """Return a function returning the conninfo with port number halved."""
+
+    def half_the_port_():
+        d = conninfo_to_dict(conninfo)
+        d["port"] = int(d["port"]) // 2
+        return make_conninfo(**d)
+
+    return half_the_port_

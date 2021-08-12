@@ -15,6 +15,7 @@ from psycopg.conninfo import conninfo_to_dict
 from .utils import gc_collect
 from .test_cursor import my_row_factory
 from .test_connection import tx_params, tx_values_map
+from .test_connection import double_the_port, half_the_port
 
 pytestmark = pytest.mark.asyncio
 
@@ -63,6 +64,14 @@ async def test_connect_timeout():
     elapsed = 0
     await asyncio.gather(closer(), connect())
     assert elapsed == pytest.approx(1.0, abs=0.05)
+
+
+async def test_connect_callable(dsn):
+    dsn = double_the_port(dsn)
+
+    conn = await AsyncConnection.connect(half_the_port_async(dsn))
+    assert not conn.closed
+    await conn.close()
 
 
 async def test_close(aconn):
@@ -696,3 +705,10 @@ async def test_set_transaction_param_strange(aconn):
 
     await aconn.set_deferrable(0)
     assert aconn.deferrable is False
+
+
+def half_the_port_async(conninfo):
+    async def half_the_port_async_():
+        return half_the_port(conninfo)()
+
+    return half_the_port_async_

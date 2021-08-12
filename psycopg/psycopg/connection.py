@@ -9,8 +9,8 @@ import logging
 import warnings
 import threading
 from types import TracebackType
-from typing import Any, AsyncIterator, Callable, cast, Generic, Iterator, List
-from typing import NamedTuple, Optional, Type, TypeVar, Union
+from typing import Any, AsyncIterator, Awaitable, Callable, cast, Generic
+from typing import Iterator, List, NamedTuple, Optional, Type, TypeVar, Union
 from typing import overload, TYPE_CHECKING
 from weakref import ref, ReferenceType
 from functools import partial
@@ -535,7 +535,7 @@ class Connection(BaseConnection[Row]):
     @classmethod
     def connect(
         cls,
-        conninfo: str = "",
+        conninfo: Union[str, Callable[[], str]] = "",
         *,
         autocommit: bool = False,
         row_factory: RowFactory[Row],
@@ -547,7 +547,7 @@ class Connection(BaseConnection[Row]):
     @classmethod
     def connect(
         cls,
-        conninfo: str = "",
+        conninfo: Union[str, Callable[[], str]] = "",
         *,
         autocommit: bool = False,
         **kwargs: Union[None, int, str],
@@ -557,7 +557,7 @@ class Connection(BaseConnection[Row]):
     @classmethod  # type: ignore[misc]
     def connect(
         cls,
-        conninfo: str = "",
+        conninfo: Union[str, Callable[[], str]] = "",
         *,
         autocommit: bool = False,
         row_factory: Optional[RowFactory[Row]] = None,
@@ -566,6 +566,9 @@ class Connection(BaseConnection[Row]):
         """
         Connect to a database server and return a new `Connection` instance.
         """
+        if callable(conninfo):
+            conninfo = conninfo()
+
         conninfo, timeout = _conninfo_connect_timeout(conninfo, **kwargs)
         rv = cls._wait_conn(
             cls._connect_gen(conninfo, autocommit=autocommit),
@@ -793,7 +796,7 @@ class AsyncConnection(BaseConnection[Row]):
     @classmethod
     async def connect(
         cls,
-        conninfo: str = "",
+        conninfo: Union[str, Callable[[], Awaitable[str]]] = "",
         *,
         autocommit: bool = False,
         row_factory: AsyncRowFactory[Row],
@@ -805,7 +808,7 @@ class AsyncConnection(BaseConnection[Row]):
     @classmethod
     async def connect(
         cls,
-        conninfo: str = "",
+        conninfo: Union[str, Callable[[], Awaitable[str]]] = "",
         *,
         autocommit: bool = False,
         **kwargs: Union[None, int, str],
@@ -815,12 +818,15 @@ class AsyncConnection(BaseConnection[Row]):
     @classmethod  # type: ignore[misc]
     async def connect(
         cls,
-        conninfo: str = "",
+        conninfo: Union[str, Callable[[], Awaitable[str]]] = "",
         *,
         autocommit: bool = False,
         row_factory: Optional[AsyncRowFactory[Row]] = None,
         **kwargs: Any,
     ) -> "AsyncConnection[Any]":
+        if callable(conninfo):
+            conninfo = await conninfo()
+
         conninfo, timeout = _conninfo_connect_timeout(conninfo, **kwargs)
         rv = await cls._wait_conn(
             cls._connect_gen(conninfo, autocommit=autocommit),

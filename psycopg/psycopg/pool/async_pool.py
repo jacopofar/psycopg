@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
 from typing import Any, AsyncIterator, Awaitable, Callable, Deque
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Optional, Type, Union
 from weakref import ref
 from collections import deque
 
@@ -28,9 +28,13 @@ logger = logging.getLogger("psycopg.pool")
 
 
 class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
+
+    # Limit the type to exclude the sync callable
+    conninfo: Union[str, Callable[[], Awaitable[str]]]
+
     def __init__(
         self,
-        conninfo: str = "",
+        conninfo: Union[str, Callable[[], Awaitable[str]]] = "",
         *,
         connection_class: Type[AsyncConnection[Any]] = AsyncConnection,
         configure: Optional[
